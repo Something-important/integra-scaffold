@@ -1,0 +1,152 @@
+[
+  {
+    "id": "1",
+    "title": "Modern Downtown Apartment",
+    "description": "A beautiful modern apartment in the heart of downtown with stunning city views.",
+    "location": "New York, NY",
+    "price": "2.5",
+    "shares": 1000,
+    "availableShares": 250,
+    "image": "/placeholder-property.jpg",
+    "images": [
+      "/placeholder-property.jpg"
+    ],
+    "tags": [
+      "Residential",
+      "Downtown"
+    ],
+    "roi": "8.5",
+    "propertyType": "Residential",
+    "ownerAddress": "0x1234567890123456789012345678901234567890",
+    "status": "active",
+    "monthlyIncome": "0.18",
+    "totalArea": 1200,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "yearBuilt": 2020,
+    "amenities": [
+      "Gym",
+      "Pool",
+      "Parking",
+      "Concierge"
+    ],
+    "coordinates": {
+      "lat": 40.7128,
+      "lng": -74.006
+    },
+    "createdAt": "2025-09-27T11:55:55.431Z",
+    "updatedAt": "2025-09-27T11:55:55.431Z"
+  },
+  {
+    "id": "2",
+    "title": "Luxury Beach Villa",
+    "description": "An exclusive beachfront villa with private beach access and panoramic ocean views.",
+    "location": "Miami, FL",
+    "price": "5.8",
+    "shares": 2000,
+    "availableShares": 500,
+    "image": "/placeholder-property.jpg",
+    "images": [
+      "/placeholder-property.jpg"
+    ],
+    "tags": [
+      "Luxury",
+      "Beachfront"
+    ],
+    "roi": "12.3",
+    "propertyType": "Luxury",
+    "ownerAddress": "0x2345678901234567890123456789012345678901",
+    "status": "active",
+    "monthlyIncome": "0.6",
+    "totalArea": 3500,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "yearBuilt": 2019,
+    "amenities": [
+      "Private Beach",
+      "Pool",
+      "Wine Cellar",
+      "Home Theater"
+    ],
+    "coordinates": {
+      "lat": 25.7617,
+      "lng": -80.1918
+    },
+    "createdAt": "2025-09-27T11:55:55.431Z",
+    "updatedAt": "2025-09-27T11:55:55.431Z"
+  },
+  {
+    "id": "3",
+    "title": "Commercial Office Space",
+    "description": "Premium office space in the tech hub with modern amenities and flexible layouts.",
+    "location": "San Francisco, CA",
+    "price": "8.2",
+    "shares": 5000,
+    "availableShares": 1200,
+    "image": "/placeholder-property.jpg",
+    "images": [
+      "/placeholder-property.jpg"
+    ],
+    "tags": [
+      "Commercial",
+      "Tech Hub"
+    ],
+    "roi": "15.7",
+    "propertyType": "Commercial",
+    "ownerAddress": "0x3456789012345678901234567890123456789012",
+    "status": "active",
+    "monthlyIncome": "1.07",
+    "totalArea": 15000,
+    "yearBuilt": 2018,
+    "amenities": [
+      "High-speed Internet",
+      "Conference Rooms",
+      "Parking",
+      "Security"
+    ],
+    "coordinates": {
+      "lat": 37.7749,
+      "lng": -122.4194
+    },
+    "createdAt": "2025-09-27T11:55:55.431Z",
+    "updatedAt": "2025-09-27T11:55:55.431Z"
+  },
+  {
+    "id": "4",
+    "title": "Historic Townhouse",
+    "description": "A beautifully restored historic townhouse with original architectural details.",
+    "location": "Boston, MA",
+    "price": "3.1",
+    "shares": 1500,
+    "availableShares": 300,
+    "image": "/placeholder-property.jpg",
+    "images": [
+      "/placeholder-property.jpg"
+    ],
+    "tags": [
+      "Historic",
+      "Residential"
+    ],
+    "roi": "9.2",
+    "propertyType": "Residential",
+    "ownerAddress": "0x4567890123456789012345678901234567890123",
+    "status": "active",
+    "monthlyIncome": "0.24",
+    "totalArea": 2200,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "yearBuilt": 1890,
+    "amenities": [
+      "Historic Details",
+      "Garden",
+      "Parking",
+      "Fireplace"
+    ],
+    "coordinates": {
+      "lat": 42.3601,
+      "lng": -71.0589
+    },
+    "createdAt": "2025-09-27T11:55:55.431Z",
+    "updatedAt": "2025-09-27T11:55:55.431Z"
+  }
+]
