@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { NextPage } from "next";
+import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { Address } from "~~/components/scaffold-eth";
 import {
@@ -13,43 +14,59 @@ import {
   PlusIcon
 } from "@heroicons/react/24/outline";
 
-// Mock data for user's properties and investments
-const mockUserProperties = [
-  {
-    id: 1,
-    title: "Modern Downtown Apartment",
-    location: "New York, NY",
-    sharesOwned: 150,
-    totalShares: 1000,
-    currentValue: "0.375 ETH",
-    totalInvested: "0.3 ETH",
-    roi: "+25%",
-    monthlyIncome: "0.02 ETH"
-  },
-  {
-    id: 2,
-    title: "Luxury Beach Villa",
-    location: "Miami, FL",
-    sharesOwned: 75,
-    totalShares: 2000,
-    currentValue: "0.217 ETH",
-    totalInvested: "0.2 ETH",
-    roi: "+8.5%",
-    monthlyIncome: "0.015 ETH"
-  }
-];
-
-const mockStats = {
-  totalInvested: "0.5 ETH",
-  currentValue: "0.592 ETH",
-  totalROI: "+18.4%",
-  monthlyIncome: "0.035 ETH",
-  propertiesOwned: 2
-};
-
 const Dashboard: NextPage = () => {
+  const router = useRouter();
   const { address: connectedAddress } = useAccount();
   const [activeTab, setActiveTab] = useState("overview");
+  const [userProperties, setUserProperties] = useState<any[]>([]);
+  const [userStats, setUserStats] = useState({
+    totalInvested: "0 USD",
+    currentValue: "0 USD",
+    totalROI: "0%",
+    monthlyIncome: "0 USD",
+    propertiesOwned: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load user data when address is available
+  useEffect(() => {
+    if (connectedAddress) {
+      loadUserData();
+    }
+  }, [connectedAddress]);
+
+  const loadUserData = async () => {
+    if (!connectedAddress) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch user investments from the new API endpoint
+      const response = await fetch('/api/user/investments', {
+        headers: {
+          'X-Wallet-Address': connectedAddress,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch user investments');
+      }
+
+      const { properties, stats } = data.data;
+
+      setUserProperties(properties);
+      setUserStats(stats);
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!connectedAddress) {
     return (
@@ -79,7 +96,10 @@ const Dashboard: NextPage = () => {
               </div>
             </div>
 
-            <button className="btn btn-primary">
+            <button
+              className="btn btn-primary"
+              onClick={() => router.push('/marketplace')}
+            >
               <PlusIcon className="h-5 w-5" />
               Invest in Property
             </button>
@@ -89,13 +109,27 @@ const Dashboard: NextPage = () => {
 
       {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {error && (
+          <div className="text-center py-8 mb-8">
+            <div className="text-4xl mb-2">⚠️</div>
+            <p className="text-error mb-4">{error}</p>
+            <button className="btn btn-primary" onClick={loadUserData}>
+              Retry Loading Dashboard
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="card bg-base-100 shadow-lg border border-base-300">
             <div className="card-body p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-base-content/60">Total Invested</p>
-                  <p className="text-2xl font-bold text-base-content">{mockStats.totalInvested}</p>
+                  {isLoading ? (
+                    <div className="h-8 bg-base-300 rounded w-20 animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-base-content">{userStats.totalInvested} USD</p>
+                  )}
                 </div>
                 <CurrencyDollarIcon className="h-8 w-8 text-primary" />
               </div>
@@ -107,7 +141,11 @@ const Dashboard: NextPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-base-content/60">Current Value</p>
-                  <p className="text-2xl font-bold text-base-content">{mockStats.currentValue}</p>
+                  {isLoading ? (
+                    <div className="h-8 bg-base-300 rounded w-20 animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-base-content">{userStats.currentValue} USD</p>
+                  )}
                 </div>
                 <ArrowTrendingUpIcon className="h-8 w-8 text-success" />
               </div>
@@ -119,7 +157,11 @@ const Dashboard: NextPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-base-content/60">Total ROI</p>
-                  <p className="text-2xl font-bold text-success">{mockStats.totalROI}</p>
+                  {isLoading ? (
+                    <div className="h-8 bg-base-300 rounded w-16 animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-success">{userStats.totalROI}</p>
+                  )}
                 </div>
                 <ChartBarIcon className="h-8 w-8 text-success" />
               </div>
@@ -131,7 +173,11 @@ const Dashboard: NextPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-base-content/60">Monthly Income</p>
-                  <p className="text-2xl font-bold text-base-content">{mockStats.monthlyIncome}</p>
+                  {isLoading ? (
+                    <div className="h-8 bg-base-300 rounded w-20 animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-base-content">{userStats.monthlyIncome} USD</p>
+                  )}
                 </div>
                 <CurrencyDollarIcon className="h-8 w-8 text-secondary" />
               </div>
@@ -143,7 +189,11 @@ const Dashboard: NextPage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-base-content/60">Properties</p>
-                  <p className="text-2xl font-bold text-base-content">{mockStats.propertiesOwned}</p>
+                  {isLoading ? (
+                    <div className="h-8 bg-base-300 rounded w-8 animate-pulse"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-base-content">{userStats.propertiesOwned}</p>
+                  )}
                 </div>
                 <BuildingOfficeIcon className="h-8 w-8 text-accent" />
               </div>
@@ -219,8 +269,55 @@ const Dashboard: NextPage = () => {
         )}
 
         {activeTab === "properties" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {mockUserProperties.map((property) => (
+          <>
+            {isLoading && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="card bg-base-100 shadow-lg border border-base-300 animate-pulse">
+                    <div className="card-body">
+                      <div className="h-6 bg-base-300 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-base-300 rounded w-1/2 mb-4"></div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="h-4 bg-base-300 rounded"></div>
+                        <div className="h-4 bg-base-300 rounded"></div>
+                        <div className="h-4 bg-base-300 rounded"></div>
+                        <div className="h-4 bg-base-300 rounded"></div>
+                      </div>
+                      <div className="h-8 bg-base-300 rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">⚠️</div>
+                <p className="text-error mb-4">{error}</p>
+                <button className="btn btn-primary" onClick={loadUserData}>
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !error && userProperties.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🏠</div>
+                <h3 className="text-xl font-semibold text-base-content mb-2">No properties yet</h3>
+                <p className="text-base-content/60 mb-4">Start investing in tokenized real estate</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => router.push('/marketplace')}
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  Browse Properties
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !error && userProperties.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {userProperties.map((property) => (
               <div key={property.id} className="card bg-base-100 shadow-lg border border-base-300">
                 <div className="card-body">
                   <div className="flex justify-between items-start mb-4">
@@ -255,13 +352,15 @@ const Dashboard: NextPage = () => {
                   <div className="bg-base-200 p-3 rounded-lg">
                     <div className="flex justify-between text-sm">
                       <span>Monthly Income:</span>
-                      <span className="font-medium text-secondary">{property.monthlyIncome}</span>
+                      <span className="font-medium text-secondary">{property.monthlyIncome} USD</span>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === "transactions" && (

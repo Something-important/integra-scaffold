@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProperties, saveProperty } from '~~/temp-utils/propertyStorage';
+import supabase from '~~/utils/supabase';
 import { CreatePropertyRequest, PropertiesResponse, PropertyResponse, Property, PropertyFilters } from '~~/types/property';
 
 // Helper function to get wallet address from request headers
@@ -44,11 +44,91 @@ export async function GET(request: NextRequest): Promise<NextResponse<Properties
       filters.tags = tagsParam.split(',');
     }
 
-    const { properties, total } = await getProperties(filters);
+    // Build Supabase query
+    let query = supabase.select('integra_properties', {
+      select: '*',
+      order: 'created_at.desc'
+    });
+
+    const result = await query;
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    let properties = result.data || [];
+
+    // Apply filters
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      properties = properties.filter((property: any) =>
+        property.title.toLowerCase().includes(searchTerm) ||
+        property.location.toLowerCase().includes(searchTerm) ||
+        property.description?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    if (filters.propertyType && filters.propertyType !== "All") {
+      properties = properties.filter((property: any) => property.property_type === filters.propertyType);
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      properties = properties.filter((property: any) =>
+        filters.tags!.some(tag => property.tags.includes(tag))
+      );
+    }
+
+    if (filters.status) {
+      properties = properties.filter((property: any) => property.status === filters.status);
+    }
+
+    if (filters.location) {
+      properties = properties.filter((property: any) =>
+        property.location.toLowerCase().includes(filters.location!.toLowerCase())
+      );
+    }
+
+    const total = properties.length;
+
+    // Apply pagination
+    if (filters.offset !== undefined) {
+      properties = properties.slice(filters.offset);
+    }
+
+    if (filters.limit !== undefined) {
+      properties = properties.slice(0, filters.limit);
+    }
+
+    // Transform to match frontend format (camelCase)
+    const transformedProperties = properties.map((property: any) => ({
+      id: property.id,
+      title: property.title,
+      description: property.description,
+      location: property.location,
+      price: property.price,
+      shares: property.total_shares,
+      availableShares: property.available_shares,
+      image: property.image,
+      images: property.images,
+      tags: property.tags,
+      roi: property.roi,
+      propertyType: property.property_type,
+      ownerAddress: property.owner_address,
+      status: property.status,
+      monthlyIncome: property.monthly_income,
+      totalArea: property.total_area,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      yearBuilt: property.year_built,
+      amenities: property.amenities,
+      coordinates: property.coordinates,
+      createdAt: property.created_at,
+      updatedAt: property.updated_at
+    }));
 
     return NextResponse.json({
       success: true,
-      data: properties,
+      data: transformedProperties,
       total
     });
   } catch (error) {
@@ -129,7 +209,36 @@ export async function POST(request: NextRequest): Promise<NextResponse<PropertyR
       coordinates: body.coordinates,
     };
 
-    const savedProperty = await saveProperty(propertyData);
+    // Insert property into Supabase
+    const result = await supabase.insert('integra_properties', {
+      id: propertyData.id,
+      title: propertyData.title,
+      description: propertyData.description,
+      location: propertyData.location,
+      price: propertyData.price,
+      total_shares: propertyData.shares,
+      available_shares: propertyData.shares, // Initially all shares are available
+      image: propertyData.image,
+      images: propertyData.images || [],
+      tags: propertyData.tags || [],
+      roi: propertyData.roi || "0",
+      property_type: propertyData.propertyType,
+      owner_address: propertyData.ownerAddress,
+      status: 'active',
+      monthly_income: propertyData.monthlyIncome,
+      total_area: propertyData.totalArea,
+      bedrooms: propertyData.bedrooms,
+      bathrooms: propertyData.bathrooms,
+      year_built: propertyData.yearBuilt,
+      amenities: propertyData.amenities || [],
+      coordinates: propertyData.coordinates,
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+
+    const savedProperty = result.data;
 
     return NextResponse.json({ success: true, data: savedProperty });
   } catch (error) {

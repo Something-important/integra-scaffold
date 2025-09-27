@@ -16,6 +16,10 @@ import {
   WifiIcon,
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
+import { writeContract, waitForTransactionReceipt } from '@wagmi/core';
+import { parseUnits } from 'viem';
+import { USDT_ABI } from '../../../contracts/usd'; // Create this if not already present
+
 
 const PropertyDetail: NextPage = () => {
   const params = useParams();
@@ -24,7 +28,10 @@ const PropertyDetail: NextPage = () => {
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [showInvestModal, setShowInvestModal] = useState(false);
+  const [shareAmount, setShareAmount] = useState<number>(1);
+  const [isInvesting, setIsInvesting] = useState(false);
+  const USDT_ADDRESS = "0xAD95fBF311a6EE0221a4BaDe4ae7DEfd8cE98eBb";
   const propertyId = params.id as string;
 
   useEffect(() => {
@@ -52,6 +59,72 @@ const PropertyDetail: NextPage = () => {
       setIsLoading(false);
     }
   };
+
+  const calculateInvestmentAmount = () => {
+    if (!property) return 0;
+    const pricePerShare = parseFloat(property.price) / property.shares;
+    return pricePerShare * shareAmount;
+  };
+
+  const handleInvestment = async () => {
+  if (!property || !connectedAddress) return;
+
+  setIsInvesting(true);
+
+  try {
+    const totalAmount = calculateInvestmentAmount(); // In ETH, but USDT has 6 decimals
+    const usdtDecimals = 6; // USDT typically has 6 decimals
+    const amountInUSDT = parseUnits(totalAmount.toFixed(usdtDecimals), usdtDecimals);
+
+    // Replace with your treasury/escrow/recipient wallet address
+    const recipient = property.recipientAddress || "0xYourTreasuryWallet"; // <-- Make sure this is defined!
+
+    // 👉 1. Initiate USDT transfer
+    const txHash = await writeContract({
+      address: USDT_ADDRESS,
+      abi: USDT_ABI,
+      functionName: 'transfer',
+      args: [recipient, amountInUSDT],
+      account: connectedAddress, // wallet sending the transaction
+    });
+
+    // 👉 2. Wait for confirmation
+    const receipt = await waitForTransactionReceipt({ hash: txHash });
+
+    // 👉 3. Only after confirmation, record investment in backend
+    const response = await fetch('/api/investments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Wallet-Address': connectedAddress,
+      },
+      body: JSON.stringify({
+        propertyId: property.id,
+        shares: shareAmount,
+        amountInvested: totalAmount.toFixed(6),
+        sharePrice: (parseFloat(property.price) / property.shares).toFixed(6),
+        transactionHash: txHash,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert('Investment successful!');
+      setShowInvestModal(false);
+      setShareAmount(1);
+      loadProperty(); // Refresh property to show updated available shares
+    } else {
+      alert('Backend error: ' + data.error);
+    }
+  } catch (err) {
+    console.error('USDT transfer or investment error:', err);
+    alert('Transaction failed. Please try again.');
+  } finally {
+    setIsInvesting(false);
+  }
+};
+
 
   if (isLoading) {
     return (
@@ -203,7 +276,7 @@ const PropertyDetail: NextPage = () => {
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="text-center p-3 bg-base-200 rounded-lg">
                     <div className="text-2xl font-bold text-primary">{property.price}</div>
-                    <div className="text-sm text-base-content/60">ETH Total Value</div>
+                    <div className="text-sm text-base-content/60">USD Total Value</div>
                   </div>
                   <div className="text-center p-3 bg-base-200 rounded-lg">
                     <div className="text-2xl font-bold text-success">{property.roi}%</div>
@@ -240,7 +313,7 @@ const PropertyDetail: NextPage = () => {
                   {property.monthlyIncome && (
                     <div className="flex justify-between">
                       <span className="text-base-content/60">Monthly Income:</span>
-                      <span className="font-medium text-success">{property.monthlyIncome} ETH</span>
+                      <span className="font-medium text-success">{property.monthlyIncome} USD</span>
                     </div>
                   )}
                 </div>
@@ -263,7 +336,7 @@ const PropertyDetail: NextPage = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Price per Share:</span>
-                    <span className="font-bold">{(parseFloat(property.price) / property.shares).toFixed(6)} ETH</span>
+                    <span className="font-bold">{(parseFloat(property.price) / property.shares).toFixed(6)} USD</span>
                   </div>
 
                   {/* Progress Bar */}
@@ -283,9 +356,13 @@ const PropertyDetail: NextPage = () => {
                   {/* Investment Button */}
                   <div className="pt-4">
                     {connectedAddress ? (
-                      <button className="btn btn-primary w-full btn-lg">
+                      <button
+                        className="btn btn-primary w-full btn-lg"
+                        onClick={() => setShowInvestModal(true)}
+                        disabled={property.availableShares === 0}
+                      >
                         <CurrencyDollarIcon className="h-5 w-5 mr-2" />
-                        Invest Now
+                        {property.availableShares === 0 ? 'Sold Out' : 'Invest Now'}
                       </button>
                     ) : (
                       <button className="btn btn-outline w-full btn-lg" disabled>
@@ -313,6 +390,89 @@ const PropertyDetail: NextPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Investment Modal */}
+      {showInvestModal && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-md">
+            <h3 className="font-bold text-lg mb-4">Invest in {property?.title}</h3>
+
+            <div className="space-y-4">
+              {/* Share Input */}
+              <div>
+                <label className="label">
+                  <span className="label-text">Number of Shares</span>
+                  <span className="label-text-alt">Max: {property?.availableShares}</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={property?.availableShares}
+                  value={shareAmount}
+                  onChange={(e) => setShareAmount(Math.max(1, Math.min(property?.availableShares || 1, parseInt(e.target.value) || 1)))}
+                  className="input input-bordered w-full"
+                  placeholder="Enter number of shares"
+                />
+              </div>
+
+              {/* Investment Summary */}
+              <div className="bg-base-200 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span>Price per Share:</span>
+                  <span className="font-medium">
+                    {property ? (parseFloat(property.price) / property.shares).toFixed(6) : '0'} USD
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shares:</span>
+                  <span className="font-medium">{shareAmount}</span>
+                </div>
+                <hr className="border-base-300" />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>Total Amount:</span>
+                  <span className="text-primary">
+                    {calculateInvestmentAmount().toFixed(6)} USD
+                  </span>
+                </div>
+                <p className="text-xs text-base-content/60 mt-2">
+                  * Transaction will be processed in USDT equivalent
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="modal-action">
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setShowInvestModal(false);
+                    setShareAmount(1);
+                  }}
+                  disabled={isInvesting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleInvestment}
+                  disabled={isInvesting || shareAmount < 1 || shareAmount > (property?.availableShares || 0)}
+                >
+                  {isInvesting ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CurrencyDollarIcon className="h-4 w-4 mr-2" />
+                      Confirm Investment
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

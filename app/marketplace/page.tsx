@@ -213,7 +213,7 @@ const Marketplace: NextPage = () => {
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span>Total Value:</span>
-                      <span className="font-semibold">{property.price} ETH</span>
+                      <span className="font-semibold">{property.price} USD</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Available Shares:</span>
@@ -228,7 +228,7 @@ const Marketplace: NextPage = () => {
                     {property.monthlyIncome && (
                       <div className="flex justify-between text-sm">
                         <span>Monthly Income:</span>
-                        <span className="font-semibold text-success">{property.monthlyIncome} ETH</span>
+                        <span className="font-semibold text-success">{property.monthlyIncome} USD</span>
                       </div>
                     )}
                   </div>

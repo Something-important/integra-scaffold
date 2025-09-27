@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProperty, saveProperty, deleteProperty } from '~~/temp-utils/propertyStorage';
+import supabase from '~~/utils/supabase';
 import { PropertyResponse, UpdatePropertyRequest, Property } from '~~/types/property';
 
 // Helper function to get wallet address from request headers
@@ -32,16 +32,59 @@ export async function GET(
       );
     }
 
-    const property = await getProperty(id);
+    // Get property from Supabase
+    const result = await supabase.select('integra_properties', {
+      select: '*',
+      where: { id }
+    });
 
-    if (!property) {
+    if (result.error) {
+      console.error('Supabase error:', result.error);
+      return NextResponse.json(
+        { success: false, error: 'Database error' },
+        { status: 500 }
+      );
+    }
+
+    const properties = result.data || [];
+
+    if (properties.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Property not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, data: property });
+    const property = properties[0] as any;
+
+    // Transform to match frontend format (camelCase)
+    const transformedProperty = {
+      id: property.id,
+      title: property.title,
+      description: property.description,
+      location: property.location,
+      price: property.price,
+      shares: property.total_shares,
+      availableShares: property.available_shares,
+      image: property.image,
+      images: property.images,
+      tags: property.tags,
+      roi: property.roi,
+      propertyType: property.property_type,
+      ownerAddress: property.owner_address,
+      status: property.status,
+      monthlyIncome: property.monthly_income,
+      totalArea: property.total_area,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      yearBuilt: property.year_built,
+      amenities: property.amenities,
+      coordinates: property.coordinates,
+      createdAt: property.created_at,
+      updatedAt: property.updated_at
+    };
+
+    return NextResponse.json({ success: true, data: transformedProperty });
   } catch (error) {
     console.error('Error fetching property:', error);
     return NextResponse.json(
@@ -51,128 +94,5 @@ export async function GET(
   }
 }
 
-// PUT /api/properties/[id] - Update specific property (owner only)
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse<PropertyResponse>> {
-  try {
-    const { id } = params;
-    const body: UpdatePropertyRequest = await request.json();
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Property ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Get wallet address for authorization
-    const walletAddress = getWalletAddress(request);
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { success: false, error: 'Wallet address not provided. Please include address in Authorization header or X-Wallet-Address header.' },
-        { status: 400 }
-      );
-    }
-
-    // Get existing property
-    const existingProperty = await getProperty(id);
-
-    if (!existingProperty) {
-      return NextResponse.json(
-        { success: false, error: 'Property not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is the owner
-    if (existingProperty.ownerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Only property owner can update this property' },
-        { status: 403 }
-      );
-    }
-
-    // Prepare updated property data
-    const updatedPropertyData: Omit<Property, 'createdAt' | 'updatedAt'> = {
-      ...existingProperty,
-      ...body,
-      id, // Ensure ID doesn't change
-      ownerAddress: existingProperty.ownerAddress, // Ensure owner doesn't change
-    };
-
-    const savedProperty = await saveProperty(updatedPropertyData);
-
-    return NextResponse.json({ success: true, data: savedProperty });
-  } catch (error) {
-    console.error('Error updating property:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE /api/properties/[id] - Delete specific property (owner only)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<NextResponse<PropertyResponse>> {
-  try {
-    const { id } = params;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Property ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Get wallet address for authorization
-    const walletAddress = getWalletAddress(request);
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { success: false, error: 'Wallet address not provided. Please include address in Authorization header or X-Wallet-Address header.' },
-        { status: 400 }
-      );
-    }
-
-    // Get existing property
-    const existingProperty = await getProperty(id);
-
-    if (!existingProperty) {
-      return NextResponse.json(
-        { success: false, error: 'Property not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is the owner
-    if (existingProperty.ownerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Only property owner can delete this property' },
-        { status: 403 }
-      );
-    }
-
-    const deleted = await deleteProperty(id);
-
-    if (deleted) {
-      return NextResponse.json({ success: true, data: existingProperty });
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Failed to delete property' },
-        { status: 500 }
-      );
-    }
-  } catch (error) {
-    console.error('Error deleting property:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+// TODO: Implement PUT and DELETE methods with Supabase
+// Currently only GET is implemented and working
