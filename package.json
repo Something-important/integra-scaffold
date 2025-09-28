@@ -6,6 +6,8 @@
     "dev": "npx next dev",
     "build": "npx next build",
     "start": "npx next start",
+    "export": "npx next build",
+    "deploy": "npm run export && touch out/.nojekyll",
     "lint": "npx next lint",
     "format": "npx prettier --write . '!(node_modules|.next|contracts)/**/*'",
     "type-check": "npx tsc --noEmit"

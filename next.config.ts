@@ -2,16 +2,12 @@ import type { NextConfig } from "next";
 
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  devIndicators: false,
+  reactStrictMode: false,
   typescript: {
-    ignoreBuildErrors: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true"
+    ignoreBuildErrors: true
   },
   eslint: {
-    ignoreDuringBuilds: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true"
-  },
-  experimental: {
-    esmExternals: true
+    ignoreDuringBuilds: true
   },
   webpack: config => {
     config.resolve.fallback = {
@@ -29,10 +25,6 @@ const nextConfig: NextConfig = {
       path: false
     };
     config.externals.push("pino-pretty", "lokijs", "encoding");
-    config.module.rules.push({
-      test: /\.node$/,
-      use: 'node-loader'
-    });
     return config;
   }
 };
